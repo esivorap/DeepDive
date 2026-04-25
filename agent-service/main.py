@@ -1,4 +1,4 @@
-from fastapi import FastAPI
+uvifrom fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from db import get_data
 from ai import get_ai_insight
@@ -7,7 +7,7 @@ app = FastAPI()
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:3000"],
+    allow_origins=["http://localhost:5173"],
     allow_methods=["*"],
     allow_headers=["*"],
 )
