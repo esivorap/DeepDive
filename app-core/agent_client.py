@@ -16,6 +16,6 @@ async def get_ai_insight(employees: list, job_description: str) -> dict:
         response = await client.post(
             f"{AGENT_URL}/analyze",
             json={"message": message},
-            timeout=30.0
+            timeout=60.0
         )
         return response.json()
