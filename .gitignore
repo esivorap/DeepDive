@@ -40,3 +40,6 @@ Thumbs.db
 .env
 venv/
 __pycache__/
+
+#RAG vector DB
+chroma_db/
