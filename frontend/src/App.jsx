@@ -15,8 +15,8 @@ const COLORS = {
 
 function StatusBadge({ status }) {
   const color =
-    status === "Available" ? COLORS.green :
-    status === "Busy" ? COLORS.yellow :
+    status === "ACTIVE" ? COLORS.green :
+    status === "PER_DIEM" ? COLORS.yellow :
     COLORS.red;
   return (
     <span style={{
@@ -34,6 +34,10 @@ function StatusBadge({ status }) {
 }
 
 function EmployeeCard({ employee }) {
+  const capabilities = typeof employee.capability === "string"
+    ? JSON.parse(employee.capability)
+    : employee.capability;
+
   return (
     <div style={{
       backgroundColor: COLORS.card,
@@ -45,18 +49,24 @@ function EmployeeCard({ employee }) {
       alignItems: "center",
     }}>
       <div>
-        <div style={{ fontWeight: 600, color: COLORS.text }}>{employee.name}</div>
-        <div style={{ fontSize: "0.85rem", color: COLORS.muted }}>{employee.role}</div>
-        <div style={{ fontSize: "0.8rem", color: COLORS.muted, marginTop: "4px" }}>
-          {employee.skills?.join(", ")}
+        <div style={{ fontWeight: 600, color: COLORS.text }}>
+          {employee.name || `Employee #${employee.employeeID}`}
         </div>
+        <div style={{ fontSize: "0.8rem", color: COLORS.muted, marginTop: "4px" }}>
+          ID: {employee.employeeID}
+        </div>
+        {capabilities && (
+          <div style={{ fontSize: "0.8rem", color: COLORS.muted, marginTop: "4px" }}>
+            {Array.isArray(capabilities) ? capabilities.join(", ") : JSON.stringify(capabilities)}
+          </div>
+        )}
       </div>
-      <StatusBadge status={employee.availability} />
+      {employee.status && <StatusBadge status={employee.status} />}
     </div>
   );
 }
 
-function RecommendationCard({ candidate, index }) {
+function RecommendationCard({ employee, index }) {
   return (
     <div style={{
       backgroundColor: COLORS.card,
@@ -64,53 +74,33 @@ function RecommendationCard({ candidate, index }) {
       borderLeft: `4px solid ${COLORS.accent}`,
       borderRadius: "10px",
       padding: "1.2rem",
+      display: "flex",
+      alignItems: "center",
+      gap: "1rem",
     }}>
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-        <div style={{ display: "flex", alignItems: "center", gap: "0.75rem" }}>
-          <div style={{
-            backgroundColor: COLORS.accent,
-            color: "#fff",
-            borderRadius: "50%",
-            width: "28px",
-            height: "28px",
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            fontWeight: 700,
-            fontSize: "0.85rem",
-          }}>
-            {index + 1}
-          </div>
-          <div>
-            <div style={{ fontWeight: 700, color: COLORS.text }}>{candidate.name}</div>
-            <div style={{ fontSize: "0.85rem", color: COLORS.muted }}>{candidate.role}</div>
-          </div>
-        </div>
-        {candidate.matchScore && (
-          <div style={{
-            backgroundColor: COLORS.accent + "22",
-            color: COLORS.accent,
-            borderRadius: "999px",
-            padding: "4px 12px",
-            fontWeight: 700,
-            fontSize: "0.85rem",
-          }}>
-            {candidate.matchScore}% match
-          </div>
-        )}
+      <div style={{
+        backgroundColor: COLORS.accent,
+        color: "#fff",
+        borderRadius: "50%",
+        width: "28px",
+        height: "28px",
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        fontWeight: 700,
+        fontSize: "0.85rem",
+        flexShrink: 0,
+      }}>
+        {index + 1}
       </div>
-      {candidate.explanation && (
-        <div style={{
-          marginTop: "0.75rem",
-          fontSize: "0.875rem",
-          color: COLORS.muted,
-          lineHeight: 1.6,
-          borderTop: `1px solid ${COLORS.border}`,
-          paddingTop: "0.75rem",
-        }}>
-          {candidate.explanation}
+      <div>
+        <div style={{ fontWeight: 700, color: COLORS.text }}>
+          {employee.name || `Employee #${employee.employeeID}`}
         </div>
-      )}
+        <div style={{ fontSize: "0.8rem", color: COLORS.muted }}>
+          ID: {employee.employeeID}
+        </div>
+      </div>
     </div>
   );
 }
@@ -119,10 +109,10 @@ export default function App() {
   const [jobDescription, setJobDescription] = useState("");
   const [employees, setEmployees] = useState([]);
   const [recommendations, setRecommendations] = useState(null);
+  const [reasoning, setReasoning] = useState("");
   const [loadingEmployees, setLoadingEmployees] = useState(false);
   const [loadingRec, setLoadingRec] = useState(false);
   const [error, setError] = useState("");
-  const [personnelCount, setPersonnelCount] = useState(null);
 
   async function fetchEmployees() {
     setLoadingEmployees(true);
@@ -144,13 +134,13 @@ export default function App() {
     }
     setLoadingRec(true);
     setRecommendations(null);
-    setPersonnelCount(null);
+    setReasoning("");
     try {
       const res = await axios.post("http://localhost:8000/insights", {
         job_description: jobDescription,
       });
-      setRecommendations(res.data.candidates);
-      setPersonnelCount(res.data.personnel_count);
+      setRecommendations(res.data.chosen_employees);
+      setReasoning(res.data.reasoning);
       setError("");
     } catch {
       setError("Could not fetch recommendations. Is app-core running?");
@@ -158,9 +148,6 @@ export default function App() {
       setLoadingRec(false);
     }
   }
-
-  const available = employees.filter(e => e.availability === "Available");
-  const unavailable = employees.filter(e => e.availability !== "Available");
 
   return (
     <div style={{
@@ -253,27 +240,33 @@ export default function App() {
               </p>
             )}
 
-            {personnelCount && (
-              <div style={{
-                backgroundColor: COLORS.accent + "18",
-                border: `1px solid ${COLORS.accent}44`,
-                borderRadius: "8px",
-                padding: "0.75rem 1rem",
-                marginBottom: "1rem",
-                fontSize: "0.9rem",
-                color: COLORS.accent,
-                fontWeight: 600,
-              }}>
-                👥 Recommended personnel for this job: {personnelCount}
-              </div>
-            )}
-
             {recommendations && (
-              <div style={{ display: "flex", flexDirection: "column", gap: "0.75rem" }}>
-                {recommendations.map((c, i) => (
-                  <RecommendationCard key={i} candidate={c} index={i} />
-                ))}
-              </div>
+              <>
+                {/* Recommended employees */}
+                <div style={{ display: "flex", flexDirection: "column", gap: "0.75rem", marginBottom: "1.25rem" }}>
+                  {recommendations.map((emp, i) => (
+                    <RecommendationCard key={emp.employeeID} employee={emp} index={i} />
+                  ))}
+                </div>
+
+                {/* Reasoning */}
+                {reasoning && (
+                  <div style={{
+                    backgroundColor: COLORS.bg,
+                    border: `1px solid ${COLORS.border}`,
+                    borderRadius: "8px",
+                    padding: "1rem",
+                    fontSize: "0.875rem",
+                    color: COLORS.muted,
+                    lineHeight: 1.7,
+                  }}>
+                    <div style={{ fontWeight: 600, color: COLORS.text, marginBottom: "0.5rem" }}>
+                      💬 Reasoning
+                    </div>
+                    {reasoning}
+                  </div>
+                )}
+              </>
             )}
           </div>
         </div>
@@ -287,7 +280,7 @@ export default function App() {
         }}>
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "1rem" }}>
             <h2 style={{ margin: 0, fontSize: "1rem", fontWeight: 700 }}>
-              👥 Employee Roster
+              👥 Active Employees
             </h2>
             <button
               onClick={fetchEmployees}
@@ -308,7 +301,7 @@ export default function App() {
 
           {employees.length === 0 && (
             <p style={{ color: COLORS.muted, fontSize: "0.9rem" }}>
-              Click Refresh to load employees from the database.
+              Click Refresh to load active employees from the database.
             </p>
           )}
 
@@ -316,29 +309,19 @@ export default function App() {
             <>
               {/* Stats */}
               <div style={{
-                display: "grid",
-                gridTemplateColumns: "1fr 1fr 1fr",
-                gap: "0.75rem",
-                marginBottom: "1.25rem",
+                backgroundColor: COLORS.bg,
+                border: `1px solid ${COLORS.border}`,
+                borderRadius: "8px",
+                padding: "0.75rem 1rem",
+                marginBottom: "1rem",
+                textAlign: "center",
               }}>
-                {[
-                  { label: "Total", value: employees.length, color: COLORS.accent },
-                  { label: "Available", value: available.length, color: COLORS.green },
-                  { label: "Unavailable", value: unavailable.length, color: COLORS.red },
-                ].map(stat => (
-                  <div key={stat.label} style={{
-                    backgroundColor: COLORS.bg,
-                    border: `1px solid ${COLORS.border}`,
-                    borderRadius: "8px",
-                    padding: "0.75rem",
-                    textAlign: "center",
-                  }}>
-                    <div style={{ fontSize: "1.4rem", fontWeight: 800, color: stat.color }}>
-                      {stat.value}
-                    </div>
-                    <div style={{ fontSize: "0.75rem", color: COLORS.muted }}>{stat.label}</div>
-                  </div>
-                ))}
+                <span style={{ fontSize: "1.4rem", fontWeight: 800, color: COLORS.green }}>
+                  {employees.length}
+                </span>
+                <span style={{ fontSize: "0.85rem", color: COLORS.muted, marginLeft: "0.5rem" }}>
+                  Active Employees
+                </span>
               </div>
 
               {/* Employee List */}
@@ -349,8 +332,8 @@ export default function App() {
                 maxHeight: "520px",
                 overflowY: "auto",
               }}>
-                {employees.map((emp, i) => (
-                  <EmployeeCard key={i} employee={emp} />
+                {employees.map((emp) => (
+                  <EmployeeCard key={emp.employeeID} employee={emp} />
                 ))}
               </div>
             </>
