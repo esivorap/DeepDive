@@ -12,6 +12,7 @@ def analyze(request: QueryRequest):
     try:
         raw=run_agent(request.message)
     except Exception as e:
+        print(e)
         raise HTTPException(status_code=500, detail=str(e))
 
     if isinstance(raw, list):
@@ -27,6 +28,7 @@ def analyze(request: QueryRequest):
         formatted = formatter(raw_text)
         print(f"\nFormatted Response: {formatted}")
     except Exception as e:
+        print(e)
         raise HTTPException(status_code=500, detail=str(e))
     
     return formatted

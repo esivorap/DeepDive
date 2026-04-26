@@ -19,7 +19,7 @@ os.environ["GOOGLE_API_KEY"] = os.getenv("GEMINI_KEY")
 # ── Model ──────────────────────────────────────────────────────────────────
 llm = ChatGoogleGenerativeAI(
     model="gemma-4-26b-a4b-it", 
-    temperature=0.2,
+    temperature=0.2
 )
 
 # ── RAG Setup ──────────────────────────────────────────────────────────────
@@ -56,6 +56,7 @@ retriever = vectorstore.as_retriever(search_kwargs={"k": 4})
 def search_documents(query: str) -> str:
     """Search the loaded PDF documents for relevant information. 
     Use this during thinking to evaluate certifications, fitness standards, or any other info contained in the PDFs."""
+    print("hit search documents tool")
     results = retriever.invoke(query)
     if not results:
         return "No relevant information found in the documents."
@@ -73,6 +74,7 @@ def estimate_dive_fitness(last_dive_depth: float,last_dive_depth_units: str, las
     Estimates dive fitness based on last dive depth and date. 
     Inputs: last_dive_depth in feet(float), last_dive_depth_units: 'feet' or 'meters'. Defaults to 'feet'., last_dive_date (YYYY-MM-DD HH:MM:SS), next_dive_date (YYYY-MM-DD HH:MM:SS).
     """
+    print("hit estimate dive fitness tool")
     if(last_dive_depth_units.lower() == "meters"):
         last_dive_depth = last_dive_depth * 3.28084  # Convert meters to feet
         
@@ -119,11 +121,8 @@ tools = [search_documents, estimate_dive_fitness]
 agent = create_agent(
     model=llm,
     tools=tools,
-    system_prompt="Your job is to generate a roster of divers from a list of given employees and new job details, based on their capabilities including" \
-    "certifications, their limitations such as fitness/medical conditions and recent dive history, and the job itself (depth, datetime, etc)" \
-    "Use tools as needed to generate the most accureate and safe roster possible. For your final response, you are to generate a list of employee ID numbers you" \
-    "recommend for the given job , a report detailing your reasoning and what factors you considered, and a confidence level (high, medium, low) for your recommendation. " \
-    "Always use the tools at your disposal to ensure the safety of the divers and the success of the job. Prioritize safety, accuracy, and diver well-being above all else.",
+    system_prompt="You are a dive roster assistant. Given a job and a list of divers, select the safest and most qualified team.\n\n"
+    "Use tools if necessary. Prioritize safety above all else. Include a final output with the chosen divers' IDs list, your reasoning, and a confidence level (high, medium, low).",
 )
 
 def run_agent(message: str) -> str:
