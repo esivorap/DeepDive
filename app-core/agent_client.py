@@ -6,8 +6,11 @@ load_dotenv()
 
 AGENT_URL = os.getenv("AGENT_SERVICE_URL")
 
-async def get_ai_insight(data: list) -> str:
-    message = f"Analyze this data and give clear insights:\n{data}"
+async def get_ai_insight(employees: list, job_description: str) -> dict:
+    message = (
+        f"Job Description:\n{job_description}\n\n"
+        f"Available Employees (ID, capabilities, limitations, unavailability):\n{employees}\n\n"
+    )
 
     async with httpx.AsyncClient() as client:
         response = await client.post(
@@ -15,4 +18,4 @@ async def get_ai_insight(data: list) -> str:
             json={"message": message},
             timeout=30.0
         )
-        return response.json()["insight"]
+        return response.json()
